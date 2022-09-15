@@ -12,6 +12,7 @@
   "dependencies": {
     "@types/ws": "^8.2.0",
     "uuidv4": "^6.2.12",
+    "winston": "^3.8.2",
     "ws": "^8.2.3"
   }
 }

@@ -1,10 +1,25 @@
 //require our websocket library
 var WebSocketServer = require('ws').Server;
+var winston = require('winston');
 const { uuid } = require('uuidv4');
 
 //creating a websocket server at port 9090
 const port = process.env.PORT || 3000;
 var wss = new WebSocketServer({ port: port });
+
+const logger = winston.createLogger({
+	level: 'info',
+	transports: [
+		new winston.transports.File({
+			filename: 'logs/error.log',
+			level: 'error',
+		}),
+		new winston.transports.File({
+			filename: 'logs/combined.log',
+			level: 'info',
+		}),
+	],
+});
 
 //all connected to the server users
 var users = {};
@@ -13,61 +28,80 @@ players = [];
 
 //when a user connects to our sever
 wss.on('connection', function (connection) {
-	connection.on('message', function (message) {
-		console.log(message, ' first message');
-		var data;
-		try {
-			data = JSON.parse(message);
-		} catch (e) {
-			console.log('Invalid JSON');
-			data = {};
-		}
+	try {
+		connection.on('message', function (message) {
+			var data;
+			try {
+				data = JSON.parse(message);
+				console.log(data, ' message');
+			} catch (e) {
+				console.log('Invalid JSON');
+				logger.error(`INVALID-JSON`);
+				data = {};
+			}
 
-		switch (data.type) {
-			case 'login':
-				handleLogin(connection, data);
-				break;
-			case 'connection':
-				handleConnections(
-					data.username,
-					data.connectionId,
-					data.opponentUsername
-				);
-				break;
-			case 'offer':
-				handleOffer(data.offer, data.username, data.opponentUsername);
-				break;
-			case 'answer':
-				handleAnswer(data.answer, data.username, data.opponentUsername);
-				break;
-			case 'candidate':
-				handleCandidate(
-					data.candidate,
-					data.username,
-					data.opponentUsername
-				);
-				break;
-			case 'resetRoom':
-				resetRoom();
-				break;
-			case 'roomInfo':
-				getRoomInfo(data.username);
-				break;
-			default:
-				sendTo(connection, {
-					type: 'error',
-					message: 'Command not found: ' + data.type,
-				});
+			switch (data.type) {
+				case 'login':
+					handleLogin(connection, data);
+					break;
+				case 'connection':
+					handleConnections(
+						data.username,
+						data.connectionId,
+						data.opponentUsername
+					);
+					break;
+				case 'offer':
+					handleOffer(
+						data.offer,
+						data.username,
+						data.opponentUsername
+					);
+					break;
+				case 'answer':
+					handleAnswer(
+						data.answer,
+						data.username,
+						data.opponentUsername
+					);
+					break;
+				case 'candidate':
+					handleCandidate(
+						data.candidate,
+						data.username,
+						data.opponentUsername
+					);
+					break;
+				case 'resetRoom':
+					resetRoom();
+					break;
+				case 'roomInfo':
+					getRoomInfo(data.username);
+					break;
+				default:
+					sendTo(connection, {
+						type: 'error',
+						message: 'Command not found: ' + data.type,
+					});
 
-				break;
-		}
-	});
+					logger.error(`ERROR: Command not found: ${data.type}`);
 
-	connection.on('close', function (data) {
-		removePlayer(connection.username);
-	});
+					break;
+			}
+		});
 
-	connection.send(JSON.stringify({ type: 'players', players: users }));
+		connection.on('close', function (data) {
+			removePlayer(connection.username);
+			logger.info(`ON-CLOSE-REMOVE-PLAYER: ${connection.username}`);
+		});
+
+		connection.send(JSON.stringify({ type: 'players', players: users }));
+
+		logger.info('Connection established.');
+	} catch (error) {
+		console.log('ERR: ', error);
+		logger.error(`ERROR: ${error}`);
+	}
 });
 
 function handleCandidate(candidate, username, opponentUsername) {
@@ -81,6 +115,10 @@ function handleCandidate(candidate, username, opponentUsername) {
 		senderUsername: username,
 		opponentUsername: opponentUsername,
 	});
+
+	logger.info(
+		`[HANDLE-CANDIDATE]_username: ${username} | opponent_username: ${opponentUsername}`
+	);
 }
 
 function handleAnswer(answer, username, opponentUsername) {
@@ -94,6 +132,10 @@ function handleAnswer(answer, username, opponentUsername) {
 		senderUsername: username,
 		opponentUsername: opponentUsername,
 	});
+
+	logger.info(
+		`[HANDLE-ANSWER]_username: ${username} | opponent_username: ${opponentUsername}`
+	);
 }
 
 function handleOffer(offer, username, opponentUsername) {
@@ -108,10 +150,18 @@ function handleOffer(offer, username, opponentUsername) {
 		opponentUsername: player.info.username,
 		test: 'tes',
 	});
+
+	logger.info(
+		`[HANDLE-OFFER]_username: ${username} | opponent_username: ${opponentUsername}`
+	);
 }
 
 function handleConnections(username, connectionId, opponentUsername) {
 	broadcastMessage('connection', username, connectionId, opponentUsername);
+
+	logger.info(
+		`[HANDLE-CONNECTIONS] username: ${username} | opponent_username: ${opponentUsername} | connectionId: ${connectionId}`
+	);
 }
 
 function handleLogin(connection, data) {
@@ -137,6 +187,8 @@ function handleLogin(connection, data) {
 		playersInfo:
 			playersInfo.length === 1 ? [] : filterPlayers(data.username),
 	});
+
+	logger.info(`[HANDLE-LOGIN]: data: ${data}`);
 }
 
 function filterPlayers(username) {
@@ -159,6 +211,8 @@ function removePlayer(username) {
 
 		sendTo(player.ws, { type: 'disconnect', username: username });
 	}
+
+	logger.info(`[REMOVE-PLAYER] - username: ${username}`);
 }
 
 function broadcastMessage(type, username, connectionId, opponentUsername) {
@@ -173,6 +227,10 @@ function broadcastMessage(type, username, connectionId, opponentUsername) {
 		opponentUsername: username,
 		connectionId,
 	});
+
+	logger.info(
+		`[BROADCAST-MESSAGE] - username: ${username} | opponent_username: ${opponentUsername} | connectionId: ${connectionId}`
+	);
 }
 
 function storeUser(connection, username) {
@@ -192,6 +250,8 @@ function storeUser(connection, username) {
 
 function sendTo(connection, message) {
 	connection.send(JSON.stringify(message));
+
+	logger.info(`[SEND-TO] - message: ${JSON.stringify(message)}`);
 }
 
 function getPlayersPayload() {
@@ -210,6 +270,7 @@ function resetRoom() {
 		sendTo(player.ws, { type: 'resetRoom', status: true });
 	}
 	players = [];
+	logger.info(`[RESET-ROOM]`);
 }
 
 function getRoomInfo(username) {
@@ -228,6 +289,7 @@ function getRoomInfo(username) {
 			playersInfo: playersInfo,
 		},
 	});
+	logger.info(`[GET-ROOM-INFO] - username: ${username}`);
 }
 
 console.log('listening...');
