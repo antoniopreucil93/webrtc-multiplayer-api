@@ -1,0 +1,24 @@
+name: WEBSOCKET server CD
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy websocket server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{secrets.HOST_IP}}
+          key: ${{secrets.KEY}}
+          username: ${{secrets.USERNAME}}
+          script: |
+            sudo su
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            cd /var/www/cicd-test/docroot
+            git pull origin master
+            npm i
+            pm2 start
