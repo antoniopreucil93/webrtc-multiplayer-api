@@ -22,4 +22,3 @@ jobs:
             npm run tsc
             npm i
             pm2 start ecosystem.config.js
-
