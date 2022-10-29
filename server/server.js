@@ -28,6 +28,7 @@ players = [];
 
 //when a user connects to our sever
 wss.on('connection', function (connection) {
+	console.log('CONNECTED');
 	try {
 		connection.on('message', function (message) {
 			var data;
