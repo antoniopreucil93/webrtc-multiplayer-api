@@ -18,7 +18,7 @@ jobs:
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             cd /var/www/api.rtc-game.enyx.info/docroot
-            git pull origin master
+            git pull
             npm i
             pm2 start
 
