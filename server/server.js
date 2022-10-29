@@ -78,6 +78,12 @@ wss.on('connection', function (connection) {
 				case 'roomInfo':
 					getRoomInfo(data.username);
 					break;
+				case 'disconnectFromRoom':
+					leaveRoom(data.username);
+					break;
+				case 'startMatch':
+					startMatch();
+					break;
 				default:
 					sendTo(connection, {
 						type: 'error',
@@ -235,6 +241,7 @@ function broadcastMessage(type, username, connectionId, opponentUsername) {
 
 function storeUser(connection, username) {
 	connection.username = username;
+
 	const newPlayer = {
 		info: {
 			id: uuid(),
@@ -291,5 +298,19 @@ function getRoomInfo(username) {
 	});
 	logger.info(`[GET-ROOM-INFO] - username: ${username}`);
 }
+
+function startMatch() {
+	console.log('start match');
+	for (let i = 0; i < players.length; i++) {
+		const player = players[i];
+
+		sendTo(player.ws, {
+			type: 'startMatch',
+			success: true,
+		});
+	}
+}
+
+function leaveRoom(username) {}
 
 console.log('listening...');
