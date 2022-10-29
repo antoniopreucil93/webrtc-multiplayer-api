@@ -19,6 +19,7 @@ jobs:
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             cd /var/www/api.rtc-game.enyx.info/docroot
             git pull
+            npm run tsc
             npm i
             pm2 start ecosystem.config.js
 
