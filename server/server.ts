@@ -1,11 +1,12 @@
 //require our websocket library
-var WebSocketServer = require('ws').Server;
-var winston = require('winston');
-const { uuid } = require('uuidv4');
+import * as Websocket from 'ws';
+import * as winston from 'winston';
+import { uuid } from 'uuidv4';
 
-//creating a websocket server at port 9090
+const WebSocketServer = Websocket.Server;
+
 const port = process.env.PORT || 3000;
-var wss = new WebSocketServer({ port: port });
+var wss = new WebSocketServer({ port: +port });
 
 const logger = winston.createLogger({
 	level: 'info',
@@ -21,17 +22,29 @@ const logger = winston.createLogger({
 	],
 });
 
-//all connected to the server users
-var users = {};
+interface WebsocketV2 extends Websocket {
+	username: string;
+}
+
+interface Player {
+	info: {
+		id: string;
+		username: string;
+	};
+	ws: WebsocketV2;
+}
+
 const player = {};
-players = [];
+let players = [];
 
 //when a user connects to our sever
-wss.on('connection', function (connection) {
+wss.on('connection', function (connection: WebsocketV2) {
 	console.log('CONNECTED');
 	try {
-		connection.on('message', function (message) {
+		connection.on('message', function (rawMessage: Websocket.RawData) {
 			var data;
+			const message: string = rawMessage.toString();
+
 			try {
 				data = JSON.parse(message);
 				console.log(data, ' message');
@@ -102,7 +115,7 @@ wss.on('connection', function (connection) {
 			logger.info(`ON-CLOSE-REMOVE-PLAYER: ${connection.username}`);
 		});
 
-		connection.send(JSON.stringify({ type: 'players', players: users }));
+		connection.send(JSON.stringify({ type: 'players', players: players }));
 
 		logger.info('Connection established.');
 	} catch (error) {
@@ -240,10 +253,10 @@ function broadcastMessage(type, username, connectionId, opponentUsername) {
 	);
 }
 
-function storeUser(connection, username) {
+function storeUser(connection: WebsocketV2, username: string) {
 	connection.username = username;
 
-	const newPlayer = {
+	const newPlayer: Player = {
 		info: {
 			id: uuid(),
 			username: username,
@@ -301,7 +314,6 @@ function getRoomInfo(username) {
 }
 
 function startMatch() {
-	console.log('start match');
 	for (let i = 0; i < players.length; i++) {
 		const player = players[i];
 

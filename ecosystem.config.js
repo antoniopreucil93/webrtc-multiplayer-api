@@ -4,7 +4,7 @@ module.exports = {
 	apps: [
 		{
 			name: 'Multiplayer RTC Server',
-			script: './server/server.js',
+			script: './dist/server.js',
 		},
 	],
 	env_development: {
