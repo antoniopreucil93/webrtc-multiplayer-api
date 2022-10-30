@@ -335,8 +335,9 @@ function startMatch() {
 
 // function leaveRoom(username) {}
 
-function heartbeat(): NodeJS.Timer {
-	return setInterval(function () {
+function heartbeat(): void {
+	console.log('heartbeat');
+	setInterval(function () {
 		players.forEach((player: Player) => {
 			sendTo(player.ws, {
 				type: '__ping__',
