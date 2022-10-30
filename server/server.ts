@@ -338,6 +338,7 @@ function startMatch() {
 function heartbeat(): void {
 	console.log('heartbeat');
 	setInterval(function () {
+		console.log('interval');
 		players.forEach((player: Player) => {
 			sendTo(player.ws, {
 				type: '__ping__',
