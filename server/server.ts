@@ -5,6 +5,8 @@ import { uuid } from 'uuidv4';
 
 const WebSocketServer = Websocket.Server;
 
+const HEART_INTERVAL = 5000;
+
 const port = process.env.PORT || 3000;
 var wss = new WebSocketServer({ port: +port });
 
@@ -32,6 +34,7 @@ interface Player {
 		username: string;
 	};
 	ws: WebsocketV2;
+	aliveCounter: number;
 }
 
 const player = {};
@@ -40,6 +43,9 @@ let players = [];
 //when a user connects to our sever
 wss.on('connection', function (connection: WebsocketV2) {
 	console.log('CONNECTED');
+
+	heartbeat();
+
 	try {
 		connection.on('message', function (rawMessage: Websocket.RawData) {
 			var data;
@@ -92,9 +98,9 @@ wss.on('connection', function (connection: WebsocketV2) {
 				case 'roomInfo':
 					getRoomInfo(data.username);
 					break;
-				case 'disconnectFromRoom':
-					leaveRoom(data.username);
-					break;
+				//				case 'disconnectFromRoom':
+				//					leaveRoom(data.username);
+				//					break;
 				case 'startMatch':
 					startMatch();
 					break;
@@ -196,23 +202,25 @@ function handleLogin(connection, data) {
 		});
 	}
 
-	const newPlayer = storeUser(connection, data.username);
+	storeUser(connection, data.username);
 
-	const playersInfo = getPlayersPayload();
+	const playersInfo = getPlayersInfo();
 
 	sendTo(connection, {
 		type: 'login',
 		success: true,
 		username: data.username,
 		playersInfo:
-			playersInfo.length === 1 ? [] : filterPlayers(data.username),
+			playersInfo.length === 1
+				? []
+				: getFilteredPlayersInfo(data.username),
 	});
 
 	logger.info(`[HANDLE-LOGIN]: data: ${data}`);
 }
 
-function filterPlayers(username) {
-	const playersInfo = getPlayersPayload();
+function getFilteredPlayersInfo(username) {
+	const playersInfo = getPlayersInfo();
 
 	return playersInfo.filter(
 		currentPlayer => currentPlayer.username !== username
@@ -262,6 +270,7 @@ function storeUser(connection: WebsocketV2, username: string) {
 			username: username,
 		},
 		ws: connection,
+		aliveCounter: 0,
 	};
 
 	players.push(newPlayer);
@@ -275,7 +284,7 @@ function sendTo(connection, message) {
 	logger.info(`[SEND-TO] - message: ${JSON.stringify(message)}`);
 }
 
-function getPlayersPayload() {
+function getPlayersInfo() {
 	const playersInfo = [];
 	Object.keys(players).forEach(key => {
 		const player = players[key].info;
@@ -324,6 +333,21 @@ function startMatch() {
 	}
 }
 
-function leaveRoom(username) {}
+// function leaveRoom(username) {}
+
+function heartbeat(): NodeJS.Timer {
+	return setInterval(function () {
+		players.forEach((player: Player) => {
+			sendTo(player.ws, {
+				type: '__ping__',
+				success: true,
+			});
+
+			player.aliveCounter += 1;
+
+			return player;
+		});
+	}, HEART_INTERVAL);
+}
 
 console.log('listening...');
