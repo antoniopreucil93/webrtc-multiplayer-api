@@ -98,11 +98,11 @@ wss.on('connection', function (connection: WebsocketV2) {
 				case 'roomInfo':
 					getRoomInfo(data.username);
 					break;
-				//				case 'disconnectFromRoom':
-				//					leaveRoom(data.username);
-				//					break;
 				case 'startMatch':
 					startMatch();
+					break;
+				case '__pong__':
+					pong(data.username);
 					break;
 				default:
 					sendTo(connection, {
@@ -342,7 +342,7 @@ function heartbeat(): NodeJS.Timer {
 				type: '__ping__',
 				success: true,
 			});
-
+			console.log(player.info, ' info info info');
 			player.aliveCounter += 1;
 
 			return player;
@@ -350,4 +350,12 @@ function heartbeat(): NodeJS.Timer {
 	}, HEART_INTERVAL);
 }
 
-console.log('listening...');
+function pong(userId: string): void {
+	const participantIndex: number = players.findIndex(
+		(currentParticipant: Player) => currentParticipant.info.id === userId
+	);
+	console.log(participantIndex, ' test test pong');
+	players[participantIndex].aliveCounter = 0;
+}
+
+console.log('Listening...');
