@@ -351,9 +351,10 @@ function heartbeat(): void {
 	}, HEART_INTERVAL);
 }
 
-function pong(userId: string): void {
+function pong(username: string): void {
 	const participantIndex: number = players.findIndex(
-		(currentParticipant: Player) => currentParticipant.info.id === userId
+		(currentParticipant: Player) =>
+			currentParticipant.info.username === username
 	);
 	console.log(participantIndex, ' test test pong');
 	players[participantIndex].aliveCounter = 0;
